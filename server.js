@@ -48,18 +48,27 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files - handle both local and Vercel environments
-// In Vercel serverless functions, __dirname points to the function directory
-// Use process.cwd() which points to the project root in Vercel
-const staticPath = process.env.VERCEL ? process.cwd() : __dirname;
-app.use(express.static(staticPath, {
-  setHeaders: (res, filePath) => {
-    // Set cache headers for static assets
-    if (filePath.endsWith('.css') || filePath.endsWith('.js') || 
-        filePath.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm)$/)) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+// Serve static files - serve from both root and public directory
+// In Vercel, files in public/ are automatically served from root, but we also serve via Express
+const publicDir = path.join(__dirname, 'public');
+
+// Serve from public directory first (where we moved static files for Vercel)
+app.use(express.static(publicDir, {
+    maxAge: '1y',
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+        if (filePath.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm)$/)) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        }
     }
-  }
+}));
+
+// Also serve from root directory for local development and fallback
+app.use(express.static(__dirname, {
+    maxAge: '1y',
+    etag: true,
+    lastModified: true
 }));
 
 // Connect to MongoDB Atlas
