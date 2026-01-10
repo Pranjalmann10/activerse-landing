@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const { v4: uuidv4 } = require('uuid');
@@ -48,12 +49,57 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Serve static files - serve from both root and public directory
-// In Vercel, files in public/ are automatically served from root, but we also serve via Express
-const publicDir = path.join(__dirname, 'public');
+// Serve static files - handle both local and Vercel environments
+// In Vercel serverless, we need to use process.cwd() which points to project root
+let staticPath, publicDir;
 
-// Serve from public directory first (where we moved static files for Vercel)
-app.use(express.static(publicDir, {
+if (process.env.VERCEL) {
+    // In Vercel: project root is at process.cwd()
+    staticPath = process.cwd();
+    publicDir = path.join(staticPath, 'public');
+    
+    // Log for debugging
+    console.log('Vercel: Static path =', staticPath);
+    console.log('Vercel: Public dir =', publicDir);
+    
+    // Check if directories exist
+    try {
+        if (fs.existsSync(publicDir)) {
+            const publicFiles = fs.readdirSync(publicDir);
+            console.log('Public directory files:', publicFiles);
+        }
+        if (fs.existsSync(staticPath)) {
+            const rootFiles = fs.readdirSync(staticPath).filter(f => 
+                f.endsWith('.css') || f.endsWith('.js') || f.endsWith('.html')
+            );
+            console.log('Root directory files (filtered):', rootFiles);
+        }
+    } catch (err) {
+        console.error('Error reading directories:', err.message);
+    }
+} else {
+    // Local development
+    staticPath = __dirname;
+    publicDir = path.join(__dirname, 'public');
+    console.log('Local: Static path =', staticPath);
+}
+
+// Serve from public directory first (Vercel best practice)
+if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir, {
+        maxAge: '1y',
+        etag: true,
+        lastModified: true,
+        setHeaders: (res, filePath) => {
+            if (filePath.match(/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm)$/)) {
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            }
+        }
+    }));
+}
+
+// Also serve from root directory (for both environments)
+app.use(express.static(staticPath, {
     maxAge: '1y',
     etag: true,
     lastModified: true,
@@ -62,13 +108,6 @@ app.use(express.static(publicDir, {
             res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
     }
-}));
-
-// Also serve from root directory for local development and fallback
-app.use(express.static(__dirname, {
-    maxAge: '1y',
-    etag: true,
-    lastModified: true
 }));
 
 // Connect to MongoDB Atlas
@@ -765,21 +804,81 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async
     res.json({ received: true });
 });
 
+// Explicitly serve static files (CSS, JS) before HTML routes
+// This ensures they're served correctly in Vercel's serverless environment
+app.get('/styles.css', (req, res) => {
+    const cssPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'styles.css')
+        : path.join(__dirname, 'styles.css');
+    
+    // Try root first, then public directory
+    if (fs.existsSync(cssPath)) {
+        res.setHeader('Content-Type', 'text/css');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.sendFile(cssPath);
+    } else {
+        const publicPath = path.join(process.env.VERCEL ? process.cwd() : __dirname, 'public', 'styles.css');
+        if (fs.existsSync(publicPath)) {
+            res.setHeader('Content-Type', 'text/css');
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            res.sendFile(publicPath);
+        } else {
+            console.error('CSS file not found at:', cssPath, 'or', publicPath);
+            res.status(404).send('CSS file not found');
+        }
+    }
+});
+
+app.get('/script.js', (req, res) => {
+    const jsPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'script.js')
+        : path.join(__dirname, 'script.js');
+    
+    // Try root first, then public directory
+    if (fs.existsSync(jsPath)) {
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        res.sendFile(jsPath);
+    } else {
+        const publicPath = path.join(process.env.VERCEL ? process.cwd() : __dirname, 'public', 'script.js');
+        if (fs.existsSync(publicPath)) {
+            res.setHeader('Content-Type', 'application/javascript');
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+            res.sendFile(publicPath);
+        } else {
+            console.error('JS file not found at:', jsPath, 'or', publicPath);
+            res.status(404).send('JS file not found');
+        }
+    }
+});
+
 // Serve HTML files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'index.html')
+        : path.join(__dirname, 'index.html');
+    res.sendFile(htmlPath);
 });
 
 app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'login.html'));
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'login.html')
+        : path.join(__dirname, 'login.html');
+    res.sendFile(htmlPath);
 });
 
 app.get('/forgot-password', (req, res) => {
-    res.sendFile(path.join(__dirname, 'forgot-password.html'));
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'forgot-password.html')
+        : path.join(__dirname, 'forgot-password.html');
+    res.sendFile(htmlPath);
 });
 
 app.get('/reset-password', (req, res) => {
-    res.sendFile(path.join(__dirname, 'reset-password.html'));
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'reset-password.html')
+        : path.join(__dirname, 'reset-password.html');
+    res.sendFile(htmlPath);
 });
 
  // Start server (only if not on Vercel)
