@@ -47,7 +47,20 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+
+// Serve static files - handle both local and Vercel environments
+// In Vercel serverless functions, __dirname points to the function directory
+// Use process.cwd() which points to the project root in Vercel
+const staticPath = process.env.VERCEL ? process.cwd() : __dirname;
+app.use(express.static(staticPath, {
+  setHeaders: (res, filePath) => {
+    // Set cache headers for static assets
+    if (filePath.endsWith('.css') || filePath.endsWith('.js') || 
+        filePath.match(/\.(png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|mp4|webm)$/)) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
 // Connect to MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/activerse';
