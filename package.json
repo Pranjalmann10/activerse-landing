@@ -1,0 +1,28 @@
+{
+  "name": "activerse-booking-system",
+  "version": "1.0.0",
+  "description": "Booking system for Activerse arcade and entertainment location",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["booking", "arcade", "entertainment"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2",
+    "mongoose": "^8.0.0",
+    "dotenv": "^16.3.1",
+    "bcrypt": "^5.1.1",
+    "express-session": "^1.17.3",
+    "uuid": "^9.0.1",
+    "stripe": "^14.7.0",
+    "nodemailer": "^6.9.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
