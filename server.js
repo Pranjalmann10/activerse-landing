@@ -89,7 +89,10 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/active
 
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
-    useUnifiedTopology: true
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 10000, // 10 seconds
+    socketTimeoutMS: 45000, // 45 seconds
+    connectTimeoutMS: 10000 // 10 seconds
 })
 .then(() => {
     console.log('✓ Connected to MongoDB Atlas');
@@ -358,6 +361,35 @@ function calculateBookingPrice(numberOfGuests) {
     return PRICE_PER_PERSON * numberOfGuests;
 }
 
+// Helper function to ensure MongoDB connection is ready
+async function ensureMongoConnection() {
+    if (mongoose.connection.readyState === 1) {
+        return true; // Already connected
+    }
+    
+    if (mongoose.connection.readyState === 0) {
+        // Not connected, try to connect
+        const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/activerse';
+        try {
+            await mongoose.connect(MONGODB_URI, {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                serverSelectionTimeoutMS: 5000,
+                socketTimeoutMS: 45000
+            });
+            return true;
+        } catch (err) {
+            console.error('Failed to connect to MongoDB:', err);
+            return false;
+        }
+    }
+    
+    // Connection is in progress (readyState === 2) or disconnecting (readyState === 3)
+    // Wait a bit and check again
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return mongoose.connection.readyState === 1;
+}
+
 // Create new booking (without payment - direct save to database)
 app.post('/api/bookings', async (req, res) => {
     const { name, email, phone, booking_date, booking_time, number_of_guests, special_requests } = req.body;
@@ -365,6 +397,15 @@ app.post('/api/bookings', async (req, res) => {
     // Validation
     if (!name || !email || !phone || !booking_date || !booking_time || !number_of_guests || number_of_guests < 1) {
         return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Ensure MongoDB connection is ready
+    const isConnected = await ensureMongoConnection();
+    if (!isConnected) {
+        return res.status(503).json({ 
+            error: 'Database connection unavailable. Please try again in a moment.',
+            details: 'MongoDB connection is not ready'
+        });
     }
 
     try {
