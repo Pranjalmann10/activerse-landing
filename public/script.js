@@ -235,7 +235,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         closeBookingModal();
                     }, 5000);
                 } else {
-                    errorDiv.textContent = bookingData.error || 'Failed to submit booking. Please try again.';
+                    // Show detailed error message
+                    const errorMsg = bookingData.error || 'Failed to submit booking. Please try again.';
+                    const details = bookingData.details ? ` (${bookingData.details})` : '';
+                    errorDiv.textContent = errorMsg + details;
+                    console.error('Booking error details:', bookingData);
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Submit Booking';
                 }

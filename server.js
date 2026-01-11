@@ -368,11 +368,13 @@ app.post('/api/bookings', async (req, res) => {
     }
 
     try {
-        // Check if date/time is valid (future date)
-        const bookingDateTime = new Date(`${booking_date}T${booking_time}`);
+        // Check if date/time is valid (future date/time)
+        const bookingDateTime = new Date(`${booking_date}T${booking_time}:00`);
         const now = new Date();
-        if (bookingDateTime <= now) {
-            return res.status(400).json({ error: 'Booking date and time must be in the future' });
+        // Allow booking if it's at least 1 hour in the future
+        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+        if (bookingDateTime <= oneHourFromNow) {
+            return res.status(400).json({ error: 'Booking date and time must be at least 1 hour in the future' });
         }
 
         // Check availability - count total guests from all confirmed bookings for this time slot
@@ -396,14 +398,23 @@ app.post('/api/bookings', async (req, res) => {
             }
         }
 
-        // Initialize slot if doesn't exist
+        // Initialize slot if doesn't exist (handle race condition)
         if (!slot) {
-            slot = await TimeSlot.create({
-                date: booking_date,
-                time: booking_time,
-                available_spots: 24,
-                booked_spots: 0
-            });
+            try {
+                slot = await TimeSlot.create({
+                    date: booking_date,
+                    time: booking_time,
+                    available_spots: 24,
+                    booked_spots: 0
+                });
+            } catch (slotError) {
+                // If slot creation fails (e.g., duplicate key), try to find it again
+                if (slotError.code === 11000) {
+                    slot = await TimeSlot.findOne({ date: booking_date, time: booking_time });
+                } else {
+                    throw slotError;
+                }
+            }
         }
 
         // Calculate price for reference (not charged)
@@ -426,10 +437,12 @@ app.post('/api/bookings', async (req, res) => {
         });
 
         // Update time slot booked spots (count of guests, not bookings)
-        await TimeSlot.updateOne(
-            { _id: slot._id },
-            { $inc: { booked_spots: number_of_guests } }
-        );
+        if (slot && slot._id) {
+            await TimeSlot.updateOne(
+                { _id: slot._id },
+                { $inc: { booked_spots: number_of_guests } }
+            );
+        }
 
         res.status(201).json({
             id: booking._id,
@@ -449,9 +462,12 @@ app.post('/api/bookings', async (req, res) => {
         });
     } catch (error) {
         console.error('Booking creation error:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Request body:', req.body);
         res.status(500).json({ 
             error: 'Failed to create booking',
-            details: error.message || 'Unknown error occurred'
+            details: error.message || 'Unknown error occurred',
+            errorType: error.name || 'Error'
         });
     }
 });
