@@ -449,7 +449,10 @@ app.post('/api/bookings', async (req, res) => {
         });
     } catch (error) {
         console.error('Booking creation error:', error);
-        res.status(500).json({ error: 'Failed to create booking' });
+        res.status(500).json({ 
+            error: 'Failed to create booking',
+            details: error.message || 'Unknown error occurred'
+        });
     }
 });
 
