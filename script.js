@@ -127,9 +127,9 @@ let elements = null;
 let cardElement = null;
 let paymentIntentClientSecret = null;
 
-// Calculate booking price: 1000 INR per person per 1-hour slot
+// Calculate booking price: 1500 INR per person per 1-hour slot
 function calculatePrice(numberOfGuests) {
-    const PRICE_PER_PERSON = 1000; // 1000 INR per person
+    const PRICE_PER_PERSON = 1500; // 1500 INR per person
     return PRICE_PER_PERSON * numberOfGuests;
 }
 
