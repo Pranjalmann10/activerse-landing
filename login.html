@@ -91,7 +91,7 @@
                 });
                 const data = await response.json();
                 if (data.authenticated) {
-                    window.location.href = 'bookings.html';
+                    window.location.href = '/bookings';
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
