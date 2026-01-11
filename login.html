@@ -92,6 +92,7 @@
                 const data = await response.json();
                 if (data.authenticated) {
                     window.location.href = '/bookings';
+                    return;
                 }
             } catch (error) {
                 console.error('Auth check error:', error);
@@ -124,7 +125,10 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    window.location.href = 'bookings.html';
+                    // Wait a moment for session to be set, then redirect
+                    setTimeout(() => {
+                        window.location.href = '/bookings';
+                    }, 100);
                 } else {
                     errorDiv.textContent = data.error || 'Login failed';
                     submitBtn.disabled = false;

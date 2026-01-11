@@ -208,13 +208,21 @@ app.post('/api/auth/login', async (req, res) => {
 
         req.session.userId = user._id.toString();
         req.session.username = user.username;
-        res.json({
-            message: 'Login successful',
-            user: {
-                id: user._id,
-                username: user.username,
-                email: user.email
+        
+        // Save session before responding
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ error: 'Failed to create session' });
             }
+            res.json({
+                message: 'Login successful',
+                user: {
+                    id: user._id,
+                    username: user.username,
+                    email: user.email
+                }
+            });
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

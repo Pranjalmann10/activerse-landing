@@ -282,7 +282,7 @@
                 });
                 const data = await response.json();
                 if (!data.authenticated) {
-                    window.location.href = 'login.html';
+                    window.location.href = '/login';
                     return false;
                 }
                 currentUser = data.user;
@@ -290,7 +290,7 @@
                 return true;
             } catch (error) {
                 console.error('Auth check error:', error);
-                window.location.href = 'login.html';
+                window.location.href = '/login';
                 return false;
             }
         }
@@ -302,10 +302,10 @@
                     method: 'POST',
                     credentials: 'include'
                 });
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             } catch (error) {
                 console.error('Logout error:', error);
-                window.location.href = 'login.html';
+                window.location.href = '/login';
             }
         }
 
@@ -416,7 +416,7 @@
                 });
                 
                 if (response.status === 401) {
-                    window.location.href = 'login.html';
+                    window.location.href = '/login';
                     return;
                 }
                 
@@ -471,7 +471,7 @@
                 });
                 
                 if (response.status === 401) {
-                    window.location.href = 'login.html';
+                    window.location.href = '/login';
                     return;
                 }
                 
