@@ -10,15 +10,7 @@ const { v4: uuidv4 } = require('uuid');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Stripe Secret Key - SECURE: Only loaded from .env file, never exposed to client
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
-// Validate that Stripe key is loaded
-if (!process.env.STRIPE_SECRET_KEY) {
-    console.warn('WARNING: STRIPE_SECRET_KEY not found in .env file. Payment functionality will not work.');
-} else {
-    console.log('✓ Stripe Secret Key loaded securely from .env file');
-}
+// Payment integration removed - bookings are saved directly to database
 
 // MongoDB Models
 const Booking = require('./models/Booking');
@@ -366,83 +358,16 @@ function calculateBookingPrice(numberOfGuests) {
     return PRICE_PER_PERSON * numberOfGuests;
 }
 
-// Create payment intent
-app.post('/api/payment/create-intent', async (req, res) => {
-    const { number_of_guests } = req.body;
-
-    if (!number_of_guests || number_of_guests < 1) {
-        return res.status(400).json({ error: 'Number of guests is required (minimum 1)' });
-    }
-
-    const amount = calculateBookingPrice(number_of_guests);
-    const amountInPaise = Math.round(amount * 100); // Stripe uses smallest currency unit (paise for INR)
-
-    try {
-        // Check if Stripe is properly configured
-        if (!stripe) {
-            return res.status(500).json({ 
-                error: 'Payment system not configured. Please set STRIPE_SECRET_KEY in .env file. Get your key from https://dashboard.stripe.com/test/apikeys' 
-            });
-        }
-
-        // Validate Stripe key format
-        const stripeKey = process.env.STRIPE_SECRET_KEY;
-        if (!stripeKey || !stripeKey.startsWith('sk_')) {
-            return res.status(500).json({ 
-                error: 'Invalid Stripe Secret Key. Please configure a valid Stripe Secret Key in .env file. Get your test key from https://dashboard.stripe.com/test/apikeys' 
-            });
-        }
-
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountInPaise,
-            currency: 'inr',
-            metadata: {
-                number_of_guests: number_of_guests.toString()
-            }
-        });
-
-        res.json({
-            clientSecret: paymentIntent.client_secret,
-            amount: amount,
-            currency: 'inr'
-        });
-    } catch (error) {
-        console.error('Stripe error:', error);
-        let errorMessage = 'Failed to create payment intent';
-        
-        if (error.type === 'StripeInvalidRequestError') {
-            errorMessage = `Invalid Stripe API key. Please check your Stripe Secret Key in .env file. Error: ${error.message}`;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        
-        res.status(500).json({ 
-            error: errorMessage 
-        });
-    }
-});
-
-// Create new booking (with payment)
+// Create new booking (without payment - direct save to database)
 app.post('/api/bookings', async (req, res) => {
-    const { name, email, phone, booking_date, booking_time, number_of_guests, special_requests, payment_intent_id } = req.body;
+    const { name, email, phone, booking_date, booking_time, number_of_guests, special_requests } = req.body;
 
     // Validation
     if (!name || !email || !phone || !booking_date || !booking_time || !number_of_guests || number_of_guests < 1) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (!payment_intent_id) {
-        return res.status(400).json({ error: 'Payment is required to complete booking' });
-    }
-
-    // Verify payment intent
     try {
-        const paymentIntent = await stripe.paymentIntents.retrieve(payment_intent_id);
-        
-        if (paymentIntent.status !== 'succeeded') {
-            return res.status(400).json({ error: 'Payment not completed. Please complete payment first.' });
-        }
-
         // Check if date/time is valid (future date)
         const bookingDateTime = new Date(`${booking_date}T${booking_time}`);
         const now = new Date();
@@ -457,7 +382,7 @@ app.post('/api/bookings', async (req, res) => {
         const existingBookings = await Booking.find({
             booking_date,
             booking_time,
-            status: 'confirmed'
+            status: { $in: ['confirmed', 'pending'] }
         });
         const totalGuestsBooked = existingBookings.reduce((sum, booking) => sum + booking.number_of_guests, 0);
 
@@ -481,9 +406,11 @@ app.post('/api/bookings', async (req, res) => {
             });
         }
 
-        const amount = paymentIntent.amount / 100; // Convert from paise to rupees
+        // Calculate price for reference (not charged)
+        const PRICE_PER_PERSON = 1500;
+        const totalAmount = PRICE_PER_PERSON * number_of_guests;
 
-        // Create booking with payment confirmation
+        // Create booking without payment
         const booking = await Booking.create({
             name,
             email,
@@ -492,10 +419,9 @@ app.post('/api/bookings', async (req, res) => {
             booking_time,
             number_of_guests,
             special_requests: special_requests || '',
-            status: 'confirmed',
-            payment_status: 'paid',
-            payment_intent_id,
-            amount_paid: amount,
+            status: 'pending', // Status is pending since no payment
+            payment_status: 'not_required',
+            amount_paid: 0,
             currency: 'inr'
         });
 
@@ -507,7 +433,7 @@ app.post('/api/bookings', async (req, res) => {
 
         res.status(201).json({
             id: booking._id,
-            message: 'Booking confirmed successfully! Payment received.',
+            message: 'Booking request submitted successfully! We will contact you soon to confirm.',
             booking: {
                 id: booking._id,
                 name,
@@ -517,14 +443,13 @@ app.post('/api/bookings', async (req, res) => {
                 booking_time,
                 number_of_guests,
                 special_requests,
-                status: 'confirmed',
-                payment_status: 'paid',
-                amount_paid: amount
+                status: 'pending',
+                estimated_amount: totalAmount
             }
         });
     } catch (error) {
-        console.error('Payment verification error:', error);
-        res.status(500).json({ error: 'Failed to verify payment' });
+        console.error('Booking creation error:', error);
+        res.status(500).json({ error: 'Failed to create booking' });
     }
 });
 
@@ -750,41 +675,7 @@ app.post('/api/contact', async (req, res) => {
     }
 });
 
-// Stripe webhook endpoint (for production - handles payment confirmations)
-app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    let event;
-
-    try {
-        if (webhookSecret) {
-            event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-        } else {
-            // For development without webhook secret
-            event = req.body;
-        }
-    } catch (err) {
-        console.error('Webhook signature verification failed:', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
-
-    // Handle the event
-    if (event.type === 'payment_intent.succeeded') {
-        const paymentIntent = event.data.object;
-        // Update booking if payment succeeds via webhook
-        try {
-            await Booking.updateOne(
-                { payment_intent_id: paymentIntent.id },
-                { $set: { payment_status: 'paid', status: 'confirmed' } }
-            );
-        } catch (err) {
-            console.error('Error updating booking from webhook:', err);
-        }
-    }
-
-    res.json({ received: true });
-});
+// Payment webhook removed - no payment processing needed
 
 // Static files (CSS, JS) are now handled by Express static middleware above
 // No explicit routes needed - Express will serve files from public/ directory

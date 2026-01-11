@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -298,21 +297,9 @@
                     <textarea id="special-requests" name="special_requests" rows="3" placeholder="Any special requests or notes..."></textarea>
                 </div>
                 
-                <!-- Payment Section -->
-                <div id="payment-section" style="display: none; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--card-border);">
-                    <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Payment Information</h3>
-                    <div id="price-display" style="margin-bottom: 1rem; padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 8px;">
-                        <strong>Total Amount: ₹<span id="total-amount">0</span></strong>
-                    </div>
-                    <div id="card-element" style="padding: 1rem; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--card-border); border-radius: 8px; margin-bottom: 1rem;">
-                        <!-- Stripe Elements will create form elements here -->
-                    </div>
-                    <div id="card-errors" role="alert" style="color: #ff6b7a; margin-bottom: 1rem;"></div>
-                </div>
-                
                 <div id="booking-error" class="error-message"></div>
                 <div id="booking-success" class="success-message"></div>
-                <button type="submit" id="submit-booking-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Proceed to Payment</button>
+                <button type="submit" id="submit-booking-btn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Submit Booking</button>
             </form>
         </div>
     </div>
