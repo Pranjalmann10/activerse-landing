@@ -7,13 +7,13 @@
 }
 
 :root {
-    --primary-color: #ff6200;
-    --secondary-color: #ff6200;
-    --accent-color: #ff6200;
+    --primary-color: #00eeff;
+    --secondary-color: #00eeff;
+    --accent-color: #00eeff;
     --dark-bg: #000000;
     --darker-bg: #000000;
-    --light-text: #ff6200;
-    --gray-text: #ff6200;
+    --light-text: #00eeff;
+    --gray-text: #00eeff;
     --card-bg: rgba(255, 255, 255, 0.05);
     --card-border: rgba(255, 255, 255, 0.1);
 }
@@ -54,7 +54,7 @@ body {
     font-family: 'Rajdhani', sans-serif;
     font-size: 1.5rem;
     font-weight: 900;
-    color: #ff6200;
+    color: #00eeff;
     letter-spacing: 2px;
 }
 
@@ -79,7 +79,7 @@ body {
     left: 0;
     width: 0;
     height: 2px;
-    background: #ff6200;
+    background: #00eeff;
     transition: width 0.3s;
 }
 
@@ -104,9 +104,9 @@ body {
 }
 
 .cta-button:hover {
-    background: rgba(255, 98, 0, 0.2);
+    background: rgba(0, 238, 255, 0.2);
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(255, 98, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 238, 255, 0.4);
 }
 
 .hamburger {
@@ -150,9 +150,9 @@ body {
     width: 100%;
     height: 100%;
     background-image: 
-        radial-gradient(circle at 20% 50%, rgba(255, 98, 0, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(255, 98, 0, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 40% 20%, rgba(255, 98, 0, 0.1) 0%, transparent 50%);
+        radial-gradient(circle at 20% 50%, rgba(0, 238, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 238, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(0, 238, 255, 0.1) 0%, transparent 50%);
     animation: float 20s ease-in-out infinite;
 }
 
@@ -179,31 +179,31 @@ body {
 .glitch {
     position: relative;
     display: inline-block;
-    color: rgba(255, 98, 0, 0.85);
+    color: rgba(0, 238, 255, 0.85);
     opacity: 0.9;
     text-shadow: 
-        0 0 8px rgba(255, 98, 0, 0.6),
-        0 0 15px rgba(255, 98, 0, 0.5),
-        0 0 25px rgba(255, 98, 0, 0.4);
+        0 0 8px rgba(0, 238, 255, 0.6),
+        0 0 15px rgba(0, 238, 255, 0.5),
+        0 0 25px rgba(0, 238, 255, 0.4);
     animation: glitch 3s infinite;
 }
 
 @keyframes glitch {
     0%, 90%, 100% {
         text-shadow: 
-            0 0 8px rgba(255, 98, 0, 0.6),
-            0 0 15px rgba(255, 98, 0, 0.5),
-            0 0 25px rgba(255, 98, 0, 0.4);
+            0 0 8px rgba(0, 238, 255, 0.6),
+            0 0 15px rgba(0, 238, 255, 0.5),
+            0 0 25px rgba(0, 238, 255, 0.4);
     }
     91% {
         text-shadow: 
-            -2px 0 rgba(255, 98, 0, 0.7),
-            2px 0 rgba(255, 98, 0, 0.7);
+            -2px 0 rgba(0, 238, 255, 0.7),
+            2px 0 rgba(0, 238, 255, 0.7);
     }
     92% {
         text-shadow: 
-            2px 0 rgba(255, 98, 0, 0.7),
-            -2px 0 rgba(255, 98, 0, 0.7);
+            2px 0 rgba(0, 238, 255, 0.7),
+            -2px 0 rgba(0, 238, 255, 0.7);
     }
 }
 
@@ -243,13 +243,13 @@ body {
 .btn-primary {
     background: transparent;
     border: 2px solid var(--primary-color);
-    color: #ff6200;
-    box-shadow: 0 10px 30px rgba(255, 98, 0, 0.3);
+    color: #00eeff;
+    box-shadow: 0 10px 30px rgba(0, 238, 255, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-3px);
-    box-shadow: 0 15px 40px rgba(255, 98, 0, 0.4);
+    box-shadow: 0 15px 40px rgba(0, 238, 255, 0.4);
 }
 
 .btn-secondary {
@@ -259,7 +259,7 @@ body {
 }
 
 .btn-secondary:hover {
-    background: rgba(255, 98, 0, 0.2);
+    background: rgba(0, 238, 255, 0.2);
     transform: translateY(-3px);
 }
 
@@ -305,7 +305,7 @@ body {
     font-size: 2.5rem;
     text-align: center;
     margin-bottom: 4rem;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .features-grid {
@@ -327,7 +327,7 @@ body {
 .feature-card:hover {
     transform: translateY(-10px);
     border-color: var(--primary-color);
-    box-shadow: 0 20px 40px rgba(255, 98, 0, 0.2);
+    box-shadow: 0 20px 40px rgba(0, 238, 255, 0.2);
 }
 
 .feature-icon {
@@ -353,7 +353,7 @@ body {
 }
 
 .games .section-title {
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .games-grid {
@@ -373,7 +373,7 @@ body {
 
 .game-card:hover {
     transform: translateY(-10px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(255, 98, 0, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 238, 255, 0.3);
 }
 
 .game-image {
@@ -393,7 +393,7 @@ body {
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .game-info {
@@ -511,7 +511,7 @@ body {
 }
 
 .event-btn:hover {
-    background: rgba(255, 98, 0, 0.2);
+    background: rgba(0, 238, 255, 0.2);
     transform: translateY(-2px);
 }
 
@@ -529,7 +529,7 @@ body {
 
 .contact-info h2 {
     margin-bottom: 1.5rem;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .contact-info > p {
@@ -585,7 +585,7 @@ body {
 .contact-form h3 {
     margin-bottom: 1.5rem;
     font-size: 1.5rem;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .contact-form form {
@@ -639,7 +639,7 @@ body {
     font-family: 'Rajdhani', sans-serif;
     font-size: 1.5rem;
     margin-bottom: 1rem;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .footer-section h4 {
@@ -648,7 +648,7 @@ body {
 }
 
 .footer-section p {
-    color: #ff6200;
+    color: #00eeff;
     margin-bottom: 1rem;
 }
 
@@ -806,7 +806,7 @@ body {
     font-family: 'Rajdhani', sans-serif;
     font-size: 2rem;
     margin-bottom: 2rem;
-    color: #ff6200;
+    color: #00eeff;
 }
 
 .form-group {
@@ -876,7 +876,7 @@ body {
 .form-group textarea:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(255, 98, 0, 0.1);
+    box-shadow: 0 0 0 3px rgba(0, 238, 255, 0.1);
 }
 
 .form-group input::placeholder,
@@ -918,7 +918,7 @@ body {
 
 .admin-link:hover {
     transform: scale(1.1);
-    box-shadow: 0 8px 30px rgba(255, 98, 0, 0.6) !important;
+    box-shadow: 0 8px 30px rgba(0, 238, 255, 0.6) !important;
 }
 
 @media (max-width: 768px) {
