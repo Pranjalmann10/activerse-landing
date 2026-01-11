@@ -970,7 +970,21 @@ app.get('/', (req, res) => {
     res.sendFile(htmlPath);
 });
 
+app.get('/index.html', (req, res) => {
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'index.html')
+        : path.join(__dirname, 'index.html');
+    res.sendFile(htmlPath);
+});
+
 app.get('/login', (req, res) => {
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'login.html')
+        : path.join(__dirname, 'login.html');
+    res.sendFile(htmlPath);
+});
+
+app.get('/login.html', (req, res) => {
     const htmlPath = process.env.VERCEL 
         ? path.join(process.cwd(), 'login.html')
         : path.join(__dirname, 'login.html');
@@ -984,6 +998,13 @@ app.get('/forgot-password', (req, res) => {
     res.sendFile(htmlPath);
 });
 
+app.get('/forgot-password.html', (req, res) => {
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'forgot-password.html')
+        : path.join(__dirname, 'forgot-password.html');
+    res.sendFile(htmlPath);
+});
+
 app.get('/reset-password', (req, res) => {
     const htmlPath = process.env.VERCEL 
         ? path.join(process.cwd(), 'reset-password.html')
@@ -991,7 +1012,21 @@ app.get('/reset-password', (req, res) => {
     res.sendFile(htmlPath);
 });
 
+app.get('/reset-password.html', (req, res) => {
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'reset-password.html')
+        : path.join(__dirname, 'reset-password.html');
+    res.sendFile(htmlPath);
+});
+
 app.get('/bookings', (req, res) => {
+    const htmlPath = process.env.VERCEL 
+        ? path.join(process.cwd(), 'bookings.html')
+        : path.join(__dirname, 'bookings.html');
+    res.sendFile(htmlPath);
+});
+
+app.get('/bookings.html', (req, res) => {
     const htmlPath = process.env.VERCEL 
         ? path.join(process.cwd(), 'bookings.html')
         : path.join(__dirname, 'bookings.html');
