@@ -107,10 +107,47 @@ if (contactForm) {
 
 const newsletterForm = document.querySelector('.newsletter-form');
 if (newsletterForm) {
-    newsletterForm.addEventListener('submit', (e) => {
+    newsletterForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        alert('Thanks for subscribing to our newsletter!');
-        newsletterForm.reset();
+        
+        const emailInput = newsletterForm.querySelector('input[type="email"]');
+        const email = emailInput.value.trim();
+        const submitButton = newsletterForm.querySelector('button[type="submit"]');
+        
+        if (!email) {
+            alert('Please enter your email address.');
+            return;
+        }
+        
+        // Disable button
+        const originalButtonText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = 'Subscribing...';
+        
+        try {
+            const response = await fetch(`${API_URL}/newsletter/subscribe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(data.message || 'Successfully subscribed to our newsletter!');
+                newsletterForm.reset();
+            } else {
+                alert(data.error || 'Failed to subscribe. Please try again.');
+            }
+        } catch (error) {
+            console.error('Newsletter subscription error:', error);
+            alert('Unable to subscribe. Please check your connection and try again.');
+        } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = originalButtonText;
+        }
     });
 }
 

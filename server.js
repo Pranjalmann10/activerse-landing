@@ -17,6 +17,7 @@ const Booking = require('./models/Booking');
 const User = require('./models/User');
 const PasswordResetToken = require('./models/PasswordResetToken');
 const TimeSlot = require('./models/TimeSlot');
+const Subscriber = require('./models/Subscriber');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -807,6 +808,151 @@ app.post('/api/contact', async (req, res) => {
         console.error('Error sending email:', error);
         res.status(500).json({ 
             error: 'Failed to send message. Please try again later or contact us directly.' 
+        });
+    }
+});
+
+// Newsletter subscription endpoint
+app.post('/api/newsletter/subscribe', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validation
+        if (!email || !email.trim()) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            return res.status(400).json({ error: 'Please enter a valid email address' });
+        }
+
+        // Ensure MongoDB connection is ready
+        const isConnected = await ensureMongoConnection();
+        if (!isConnected) {
+            return res.status(503).json({ 
+                error: 'Service temporarily unavailable. Please try again later.',
+                details: 'Database connection is not ready'
+            });
+        }
+
+        const emailLower = email.trim().toLowerCase();
+
+        // Check if email already exists
+        const existingSubscriber = await Subscriber.findOne({ email: emailLower });
+        
+        if (existingSubscriber) {
+            if (existingSubscriber.active) {
+                return res.status(400).json({ error: 'This email is already subscribed to our newsletter.' });
+            } else {
+                // Reactivate if previously unsubscribed
+                existingSubscriber.active = true;
+                existingSubscriber.subscribed_at = new Date();
+                await existingSubscriber.save();
+                
+                // Send welcome back email (optional)
+                try {
+                    const emailUser = process.env.EMAIL_USER;
+                    const emailPassword = process.env.EMAIL_PASSWORD;
+                    
+                    if (emailUser && emailPassword) {
+                        const transporter = nodemailer.createTransport({
+                            service: 'gmail',
+                            auth: {
+                                user: emailUser,
+                                pass: emailPassword
+                            }
+                        });
+
+                        await transporter.sendMail({
+                            from: emailUser,
+                            to: emailLower,
+                            subject: 'Welcome back to Activerse Newsletter!',
+                            html: `
+                                <h2>Welcome back to Activerse!</h2>
+                                <p>Thank you for resubscribing to our newsletter. You'll receive updates about:</p>
+                                <ul>
+                                    <li>New games and experiences</li>
+                                    <li>Special offers and promotions</li>
+                                    <li>Events and tournaments</li>
+                                    <li>Latest news and updates</li>
+                                </ul>
+                                <p>We're excited to have you back!</p>
+                                <p>Best regards,<br>The Activerse Team</p>
+                            `
+                        });
+                    }
+                } catch (emailError) {
+                    console.error('Error sending welcome email:', emailError);
+                    // Don't fail the subscription if email fails
+                }
+                
+                return res.json({ 
+                    message: 'Successfully resubscribed to our newsletter!',
+                    subscribed: true
+                });
+            }
+        }
+
+        // Create new subscriber
+        await Subscriber.create({
+            email: emailLower,
+            active: true
+        });
+
+        // Send welcome email (optional)
+        try {
+            const emailUser = process.env.EMAIL_USER;
+            const emailPassword = process.env.EMAIL_PASSWORD;
+            
+            if (emailUser && emailPassword) {
+                const transporter = nodemailer.createTransport({
+                    service: 'gmail',
+                    auth: {
+                        user: emailUser,
+                        pass: emailPassword
+                    }
+                });
+
+                await transporter.sendMail({
+                    from: emailUser,
+                    to: emailLower,
+                    subject: 'Welcome to Activerse Newsletter!',
+                    html: `
+                        <h2>Welcome to Activerse!</h2>
+                        <p>Thank you for subscribing to our newsletter. You'll receive updates about:</p>
+                        <ul>
+                            <li>New games and experiences</li>
+                            <li>Special offers and promotions</li>
+                            <li>Events and tournaments</li>
+                            <li>Latest news and updates</li>
+                        </ul>
+                        <p>We're excited to have you with us!</p>
+                        <p>Best regards,<br>The Activerse Team</p>
+                    `
+                });
+            }
+        } catch (emailError) {
+            console.error('Error sending welcome email:', emailError);
+            // Don't fail the subscription if email fails
+        }
+
+        res.json({ 
+            message: 'Successfully subscribed to our newsletter!',
+            subscribed: true
+        });
+    } catch (error) {
+        console.error('Newsletter subscription error:', error);
+        
+        // Handle duplicate key error (MongoDB unique constraint)
+        if (error.code === 11000) {
+            return res.status(400).json({ error: 'This email is already subscribed to our newsletter.' });
+        }
+        
+        res.status(500).json({ 
+            error: 'Failed to subscribe. Please try again later.',
+            details: error.message
         });
     }
 });
