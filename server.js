@@ -87,6 +87,15 @@ app.use(express.static(publicDir, {
 // Connect to MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/activerse';
 
+// Log connection status (without exposing password)
+if (MONGODB_URI && !MONGODB_URI.includes('username:password') && MONGODB_URI !== 'mongodb://localhost:27017/activerse') {
+    const uriForLogging = MONGODB_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
+    console.log('Attempting to connect to MongoDB:', uriForLogging);
+} else {
+    console.error('⚠ MONGODB_URI is not properly configured!');
+    console.error('⚠ Please set MONGODB_URI in Vercel environment variables');
+}
+
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -95,15 +104,17 @@ mongoose.connect(MONGODB_URI, {
     connectTimeoutMS: 10000 // 10 seconds
 })
 .then(() => {
-    console.log('✓ Connected to MongoDB Atlas');
+    console.log('✓ Connected to MongoDB Atlas successfully');
+    console.log('✓ Connection state:', mongoose.connection.readyState);
     
     // Create or update admin user after connection
     initializeAdminUser();
 })
 .catch((err) => {
-    console.error('Error connecting to MongoDB:', err.message);
-    if (!MONGODB_URI || MONGODB_URI.includes('username:password')) {
-        console.error('⚠ Please set MONGODB_URI in your .env file with your MongoDB Atlas connection string');
+    console.error('✗ Error connecting to MongoDB:', err.message);
+    console.error('✗ Error details:', err);
+    if (!MONGODB_URI || MONGODB_URI.includes('username:password') || MONGODB_URI === 'mongodb://localhost:27017/activerse') {
+        console.error('⚠ Please set MONGODB_URI in Vercel environment variables with your MongoDB Atlas connection string');
     }
 });
 
@@ -363,31 +374,51 @@ function calculateBookingPrice(numberOfGuests) {
 
 // Helper function to ensure MongoDB connection is ready
 async function ensureMongoConnection() {
+    // Check if already connected
     if (mongoose.connection.readyState === 1) {
         return true; // Already connected
     }
     
+    // Check if MONGODB_URI is set
+    const MONGODB_URI = process.env.MONGODB_URI;
+    if (!MONGODB_URI || MONGODB_URI.includes('username:password') || MONGODB_URI === 'mongodb://localhost:27017/activerse') {
+        console.error('MONGODB_URI is not properly configured');
+        return false;
+    }
+    
+    // If connection is in progress (readyState === 2), wait for it
+    if (mongoose.connection.readyState === 2) {
+        // Wait up to 10 seconds for connection to complete
+        for (let i = 0; i < 10; i++) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            if (mongoose.connection.readyState === 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    // If not connected (readyState === 0), try to connect
     if (mongoose.connection.readyState === 0) {
-        // Not connected, try to connect
-        const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/activerse';
         try {
             await mongoose.connect(MONGODB_URI, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 5000,
-                socketTimeoutMS: 45000
+                serverSelectionTimeoutMS: 10000,
+                socketTimeoutMS: 45000,
+                connectTimeoutMS: 10000
             });
-            return true;
+            // Wait a moment for connection to be fully established
+            await new Promise(resolve => setTimeout(resolve, 500));
+            return mongoose.connection.readyState === 1;
         } catch (err) {
-            console.error('Failed to connect to MongoDB:', err);
+            console.error('Failed to connect to MongoDB:', err.message);
             return false;
         }
     }
     
-    // Connection is in progress (readyState === 2) or disconnecting (readyState === 3)
-    // Wait a bit and check again
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    return mongoose.connection.readyState === 1;
+    // Connection is disconnecting (readyState === 3)
+    return false;
 }
 
 // Create new booking (without payment - direct save to database)
@@ -402,9 +433,18 @@ app.post('/api/bookings', async (req, res) => {
     // Ensure MongoDB connection is ready
     const isConnected = await ensureMongoConnection();
     if (!isConnected) {
+        const MONGODB_URI = process.env.MONGODB_URI;
+        let errorDetails = 'MongoDB connection is not ready';
+        
+        if (!MONGODB_URI || MONGODB_URI.includes('username:password') || MONGODB_URI === 'mongodb://localhost:27017/activerse') {
+            errorDetails = 'MongoDB connection string is not configured. Please set MONGODB_URI in Vercel environment variables.';
+        } else {
+            errorDetails = `MongoDB connection failed. Connection state: ${mongoose.connection.readyState} (0=disconnected, 1=connected, 2=connecting, 3=disconnecting)`;
+        }
+        
         return res.status(503).json({ 
             error: 'Database connection unavailable. Please try again in a moment.',
-            details: 'MongoDB connection is not ready'
+            details: errorDetails
         });
     }
 
