@@ -89,17 +89,37 @@
                 const response = await fetch(`${API_URL}/auth/check`, {
                     credentials: 'include'
                 });
+                
+                // Only proceed if we got a valid response
+                if (!response.ok) {
+                    console.log('Auth check failed, staying on login page');
+                    return;
+                }
+                
                 const data = await response.json();
-                if (data.authenticated) {
+                
+                // Only redirect if explicitly authenticated AND we have user data
+                if (data.authenticated === true && data.user) {
+                    console.log('User already authenticated, redirecting...');
                     window.location.href = '/bookings';
                     return;
                 }
+                
+                // If not authenticated, stay on login page
+                console.log('User not authenticated, showing login form');
             } catch (error) {
                 console.error('Auth check error:', error);
+                // On error, stay on login page - don't redirect
             }
         }
 
-        checkAuth();
+        // Only check auth after page is fully loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkAuth);
+        } else {
+            // Small delay to ensure page is ready
+            setTimeout(checkAuth, 100);
+        }
 
         // Handle login form
         document.getElementById('login-form').addEventListener('submit', async (e) => {
