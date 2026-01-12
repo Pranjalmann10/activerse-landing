@@ -50,6 +50,19 @@ body {
     align-items: center;
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo-image {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
 .logo-text {
     font-family: 'Rajdhani', sans-serif;
     font-size: 1.5rem;
