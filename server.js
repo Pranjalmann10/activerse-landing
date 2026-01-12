@@ -171,12 +171,20 @@ const requireAuth = (req, res, next) => {
 app.get('/api/auth/check', async (req, res) => {
     if (req.session && req.session.userId) {
         try {
+            const isConnected = await ensureMongoConnection();
+            if (!isConnected) {
+                return res.status(503).json({ 
+                    authenticated: false,
+                    error: 'Database connection unavailable. Please try again in a moment.'
+                });
+            }
             const user = await User.findById(req.session.userId).select('username email');
             if (!user) {
                 return res.status(401).json({ authenticated: false });
             }
             res.json({ authenticated: true, user });
         } catch (error) {
+            console.error('Auth check error:', error);
             res.status(401).json({ authenticated: false });
         }
     } else {
@@ -193,6 +201,13 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     try {
+        const isConnected = await ensureMongoConnection();
+        if (!isConnected) {
+            return res.status(503).json({ 
+                error: 'Database connection unavailable. Please try again in a moment.'
+            });
+        }
+        
         const user = await User.findOne({ 
             $or: [{ username }, { email: username }] 
         });
@@ -252,6 +267,13 @@ app.post('/api/auth/change-password', requireAuth, async (req, res) => {
     }
 
     try {
+        const isConnected = await ensureMongoConnection();
+        if (!isConnected) {
+            return res.status(503).json({ 
+                error: 'Database connection unavailable. Please try again in a moment.'
+            });
+        }
+        
         const user = await User.findById(req.session.userId);
         if (!user) {
             return res.status(500).json({ error: 'User not found' });
@@ -280,6 +302,13 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     }
 
     try {
+        const isConnected = await ensureMongoConnection();
+        if (!isConnected) {
+            return res.status(503).json({ 
+                error: 'Database connection unavailable. Please try again in a moment.'
+            });
+        }
+        
         const user = await User.findOne({ email });
         let token = null;
         
@@ -322,6 +351,13 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     try {
+        const isConnected = await ensureMongoConnection();
+        if (!isConnected) {
+            return res.status(503).json({ 
+                error: 'Database connection unavailable. Please try again in a moment.'
+            });
+        }
+        
         const tokenRow = await PasswordResetToken.findOne({
             token,
             expires_at: { $gt: new Date() },
@@ -383,9 +419,16 @@ function calculateBookingPrice(numberOfGuests) {
 
 // Helper function to ensure MongoDB connection is ready
 async function ensureMongoConnection() {
-    // Check if already connected
+    // Check if already connected and verify it's working
     if (mongoose.connection.readyState === 1) {
-        return true; // Already connected
+        try {
+            // Verify connection is actually working
+            await mongoose.connection.db.admin().ping();
+            return true;
+        } catch (err) {
+            console.log('Connection ping failed, will reconnect...');
+            mongoose.connection.readyState = 0; // Mark as disconnected
+        }
     }
     
     // Check if MONGODB_URI is set
@@ -397,11 +440,16 @@ async function ensureMongoConnection() {
     
     // If connection is in progress (readyState === 2), wait for it
     if (mongoose.connection.readyState === 2) {
-        // Wait up to 15 seconds for connection to complete
-        for (let i = 0; i < 15; i++) {
+        // Wait up to 20 seconds for connection to complete
+        for (let i = 0; i < 20; i++) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             if (mongoose.connection.readyState === 1) {
-                return true;
+                try {
+                    await mongoose.connection.db.admin().ping();
+                    return true;
+                } catch (err) {
+                    // Connection not ready yet
+                }
             }
             if (mongoose.connection.readyState === 0) {
                 // Connection failed, break and try to reconnect
@@ -416,21 +464,28 @@ async function ensureMongoConnection() {
             console.log('Attempting to establish MongoDB connection...');
             // Close any existing connection attempts first
             if (mongoose.connection.readyState !== 0) {
-                await mongoose.connection.close();
+                try {
+                    await mongoose.connection.close();
+                } catch (closeErr) {
+                    // Ignore close errors
+                }
             }
             
             await mongoose.connect(MONGODB_URI, {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
-                serverSelectionTimeoutMS: 15000, // Increased to 15 seconds
+                serverSelectionTimeoutMS: 20000, // 20 seconds
                 socketTimeoutMS: 45000,
-                connectTimeoutMS: 15000, // Increased to 15 seconds
+                connectTimeoutMS: 20000, // 20 seconds
                 maxPoolSize: 10,
                 minPoolSize: 1
             });
             
-            // Wait a moment for connection to be fully established
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Wait longer for connection to be fully established and models registered
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Verify connection with ping
+            await mongoose.connection.db.admin().ping();
             
             if (mongoose.connection.readyState === 1) {
                 console.log('MongoDB connection established successfully');
