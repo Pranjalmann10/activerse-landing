@@ -280,77 +280,17 @@
                 const response = await fetch(`${API_URL}/auth/check`, {
                     credentials: 'include'
                 });
-                
-                // If server error (503), wait and retry once
-                if (response.status === 503) {
-                    console.log('Database connection unavailable, retrying in 2 seconds...');
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    const retryResponse = await fetch(`${API_URL}/auth/check`, {
-                        credentials: 'include'
-                    });
-                    if (!retryResponse.ok) {
-                        console.error('Auth check failed after retry');
-                        window.location.href = '/login';
-                        return false;
-                    }
-                    const retryData = await retryResponse.json();
-                    if (!retryData.authenticated) {
-                        window.location.href = '/login';
-                        return false;
-                    }
-                    currentUser = retryData.user;
-                    document.getElementById('user-info').textContent = `Logged in as: ${retryData.user.username}`;
-                    return true;
-                }
-                
-                // Check if response is ok
-                if (!response.ok) {
-                    console.error('Auth check failed with status:', response.status);
-                    window.location.href = '/login';
-                    return false;
-                }
-                
                 const data = await response.json();
-                
-                // Only redirect if explicitly not authenticated
-                if (data.authenticated !== true) {
-                    console.log('User not authenticated, redirecting to login');
+                if (!data.authenticated) {
                     window.location.href = '/login';
                     return false;
                 }
-                
-                // User is authenticated
-                if (data.user) {
-                    currentUser = data.user;
-                    document.getElementById('user-info').textContent = `Logged in as: ${data.user.username}`;
-                }
+                currentUser = data.user;
+                document.getElementById('user-info').textContent = `Logged in as: ${data.user.username}`;
                 return true;
             } catch (error) {
                 console.error('Auth check error:', error);
-                // Don't redirect immediately on network errors - wait a moment and show error
-                console.log('Network error during auth check, will retry...');
-                // Give it one more try after a delay
-                setTimeout(async () => {
-                    try {
-                        const retryResponse = await fetch(`${API_URL}/auth/check`, {
-                            credentials: 'include'
-                        });
-                        if (retryResponse.ok) {
-                            const retryData = await retryResponse.json();
-                            if (retryData.authenticated && retryData.user) {
-                                currentUser = retryData.user;
-                                document.getElementById('user-info').textContent = `Logged in as: ${retryData.user.username}`;
-                                // Load bookings after successful auth
-                                loadStats();
-                                loadBookings();
-                                return;
-                            }
-                        }
-                    } catch (retryError) {
-                        console.error('Retry also failed:', retryError);
-                    }
-                    window.location.href = '/login';
-                }, 2000);
+                window.location.href = '/login';
                 return false;
             }
         }
